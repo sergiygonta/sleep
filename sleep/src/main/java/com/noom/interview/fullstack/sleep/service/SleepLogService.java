@@ -2,6 +2,7 @@ package com.noom.interview.fullstack.sleep.service;
 
 import com.noom.interview.fullstack.sleep.dto.SleepLogDto;
 import com.noom.interview.fullstack.sleep.entity.SleepLog;
+import com.noom.interview.fullstack.sleep.mapper.SleepLogMapper;
 import com.noom.interview.fullstack.sleep.repository.SleepLogRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.util.stream.Stream;
 public class SleepLogService {
 
     private final SleepLogRepository repository;
+    private final SleepLogMapper mapper = SleepLogMapper.INSTANCE;
 
     public SleepLogService(SleepLogRepository repository) {
         this.repository = repository;
@@ -30,13 +32,8 @@ public class SleepLogService {
      * @return Saved SleepLog entity.
      */
     public SleepLog save(SleepLogDto dto) {
-        SleepLog log = new SleepLog();
-        log.setId(UUID.randomUUID());
-        log.setUserId(dto.userId);
-        log.setSleepDate(dto.sleepDate);
-        log.setTimeInBedStart(dto.timeInBedStart);
-        log.setTimeInBedEnd(dto.timeInBedEnd);
-        log.setTotalTimeInBedMinutes(dto.totalTimeInBedMinutes);
+        SleepLog log = mapper.toEntity(dto);
+        log.setId(UUID.randomUUID()); // Manually setting ID
         log.setMorningFeeling(SleepLog.MorningFeeling.valueOf(dto.morningFeeling.toUpperCase()));
         return repository.save(log);
     }
@@ -49,34 +46,11 @@ public class SleepLogService {
      */
     public Map<String, Object> get30DayStats(UUID userId) {
         List<SleepLog> logs = repository.findLast30DaysLogs(userId);
-        if (logs.isEmpty()) return Map.of();
+        if (logs.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
-        double avgMinutes = logs.stream().mapToInt(SleepLog::getTotalTimeInBedMinutes).average().orElse(0);
-        LocalTime avgStart = averageTime(logs.stream().map(SleepLog::getTimeInBedStart));
-        LocalTime avgEnd = averageTime(logs.stream().map(SleepLog::getTimeInBedEnd));
-
-        Map<String, Long> feelingFrequencies = logs.stream()
-                .collect(Collectors.groupingBy(l -> l.getMorningFeeling().name(), Collectors.counting()));
-
-        return Map.of(
-                "date_range", logs.get(0).getSleepDate() + " to " + logs.get(logs.size() - 1).getSleepDate(),
-                "avg_time_in_bed_minutes", avgMinutes,
-                "avg_time_in_bed_start", avgStart,
-                "avg_time_in_bed_end", avgEnd,
-                "morning_feelings", feelingFrequencies
-        );
-    }
-
-    /**
-     * Averages a stream of LocalDateTime values as LocalTime.
-     *
-     * @param times Stream of LocalDateTime.
-     * @return Averaged LocalTime.
-     */
-    private LocalTime averageTime(Stream<LocalDateTime> times) {
-        List<LocalTime> list = times.map(LocalDateTime::toLocalTime).collect(Collectors.toList());
-        int totalSeconds = list.stream().mapToInt(LocalTime::toSecondOfDay).sum();
-        return LocalTime.ofSecondOfDay(totalSeconds / list.size());
+        return buildSleepStats(logs);
     }
 
     /**
@@ -87,23 +61,52 @@ public class SleepLogService {
      */
     public Optional<SleepLogDto> getLastLog(UUID userId) {
         return repository.findTopByUserIdOrderBySleepDateDesc(userId)
-                .map(this::toDto);
+                .map(mapper::toDto);
     }
 
-    /**
-     * Converts a SleepLog entity to its DTO representation.
-     *
-     * @param log SleepLog entity.
-     * @return SleepLogDto.
-     */
-    private SleepLogDto toDto(SleepLog log) {
-        return new SleepLogDto(
-                log.getUserId(),
-                log.getSleepDate(),
-                log.getTimeInBedStart(),
-                log.getTimeInBedEnd(),
-                log.getTotalTimeInBedMinutes(),
-                log.getMorningFeeling().name()
-        );
+
+    private Map<String, Object> buildSleepStats(List<SleepLog> logs) {
+        LocalTime avgStart = averageLocalTime(logs.stream().map(SleepLog::getTimeInBedStart));
+        LocalTime avgEnd = averageLocalTime(logs.stream().map(SleepLog::getTimeInBedEnd));
+        Map<String, Long> morningFeelings = countMorningFeelings(logs);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("date_range", formatDateRange(logs));
+        result.put("avg_time_in_bed_minutes", calculateAverageTimeInBedMinutes(logs));
+        if (avgStart != null) result.put("avg_time_in_bed_start", avgStart);
+        if (avgEnd != null) result.put("avg_time_in_bed_end", avgEnd);
+        result.put("morning_feelings", morningFeelings);
+        return result;
+    }
+
+    private double calculateAverageTimeInBedMinutes(List<SleepLog> logs) {
+        return logs.stream()
+                .mapToInt(SleepLog::getTotalTimeInBedMinutes)
+                .average()
+                .orElse(0);
+    }
+
+    private LocalTime averageLocalTime(Stream<LocalDateTime> dateTimeStream) {
+        List<LocalTime> times = dateTimeStream
+                .map(LocalDateTime::toLocalTime)
+                .collect(Collectors.toList());
+
+        int totalSeconds = times.stream()
+                .mapToInt(LocalTime::toSecondOfDay)
+                .sum();
+
+        return times.isEmpty() ? null : LocalTime.ofSecondOfDay(totalSeconds / times.size());
+    }
+
+    private Map<String, Long> countMorningFeelings(List<SleepLog> logs) {
+        return logs.stream()
+                .collect(Collectors.groupingBy(
+                        l -> l.getMorningFeeling().name(),
+                        Collectors.counting()
+                ));
+    }
+
+    private String formatDateRange(List<SleepLog> logs) {
+        return logs.get(0).getSleepDate() + " to " + logs.get(logs.size() - 1).getSleepDate();
     }
 }
