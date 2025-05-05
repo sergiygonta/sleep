@@ -12,6 +12,7 @@ import java.util.UUID;
 public class SleepLog {
 
     @Id
+    @GeneratedValue
     private UUID id;
 
     @Column(name = "user_id", nullable = false)

@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.UUID;
 
 /**
@@ -38,7 +39,7 @@ public class SleepLogController {
      */
     @Operation(summary = "Log new sleep entry")
     @PostMapping
-    public ResponseEntity<Object> logSleep(@RequestBody SleepLogDto dto) {
+    public ResponseEntity<Object> logSleep(@Valid @RequestBody SleepLogDto dto) {
         return new ResponseEntity<>(service.save(dto), HttpStatus.OK);
     }
 

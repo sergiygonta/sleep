@@ -1,8 +1,3 @@
-CREATE TABLE users (
-    id UUID PRIMARY KEY,
-    email TEXT NOT NULL
-);
-
 CREATE TABLE sleep_logs (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,

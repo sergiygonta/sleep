@@ -2,8 +2,10 @@ package com.noom.interview.fullstack.sleep.repository;
 
 import com.noom.interview.fullstack.sleep.entity.SleepLog;
 import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -21,11 +23,12 @@ public interface SleepLogRepository extends JpaRepository<SleepLog, UUID> {
     Optional<SleepLog> findTopByUserIdOrderBySleepDateDesc(UUID userId);
 
     /**
-     * Find all sleep logs from the past 30 days for a user.
+     * Retrieves all sleep logs for a user from the past 30 days.
      *
-     * @param userId UUID of the user.
-     * @return List of SleepLogs.
+     * @param userId the UUID of the user
+     * @param cutoff the date 30 days ago used as the lower bound for filtering logs
+     * @return a list of {@link SleepLog} entries from the past 30 days, ordered by sleep date
      */
-    @Query("SELECT s FROM SleepLog s WHERE s.userId = :userId AND s.sleepDate >= CURRENT_DATE - 30 ORDER BY s.sleepDate")
-    List<SleepLog> findLast30DaysLogs(UUID userId);
+    @Query("SELECT s FROM SleepLog s WHERE s.userId = :userId AND s.sleepDate >= :cutoff ORDER BY s.sleepDate")
+    List<SleepLog> findLast30DaysLogs(@Param("userId") UUID userId, @Param("cutoff") LocalDate cutoff);
 }
