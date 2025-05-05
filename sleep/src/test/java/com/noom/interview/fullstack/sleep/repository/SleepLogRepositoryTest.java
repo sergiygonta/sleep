@@ -19,7 +19,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Integration tests for {@link SleepLogRepository}.
@@ -78,7 +79,6 @@ class SleepLogRepositoryTest {
 
         for (int i = 0; i < 5; i++) {
             SleepLog log = new SleepLog();
-            log.setId(UUID.randomUUID());
             log.setUserId(userId);
             log.setSleepDate(LocalDate.now().minusDays(i));
             log.setTimeInBedStart(LocalDateTime.of(LocalDate.now().minusDays(i), LocalTime.of(22, 0)));
@@ -88,7 +88,10 @@ class SleepLogRepositoryTest {
             repository.save(log);
         }
 
-        List<SleepLog> results = repository.findLast30DaysLogs(userId);
+        LocalDate cutoff = LocalDate.now().minusDays(30);
+        List<SleepLog> results = repository.findLast30DaysLogs(userId, cutoff);
+
         assertEquals(5, results.size());
+        assertTrue(results.stream().noneMatch(log -> log.getSleepDate().isBefore(cutoff)));
     }
 }

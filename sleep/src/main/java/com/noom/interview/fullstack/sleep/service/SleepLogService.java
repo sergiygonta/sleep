@@ -4,8 +4,10 @@ import com.noom.interview.fullstack.sleep.dto.SleepLogDto;
 import com.noom.interview.fullstack.sleep.entity.SleepLog;
 import com.noom.interview.fullstack.sleep.mapper.SleepLogMapper;
 import com.noom.interview.fullstack.sleep.repository.SleepLogRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
@@ -19,10 +21,12 @@ import java.util.stream.Stream;
 public class SleepLogService {
 
     private final SleepLogRepository repository;
-    private final SleepLogMapper mapper = SleepLogMapper.INSTANCE;
+    private SleepLogMapper mapper;
 
-    public SleepLogService(SleepLogRepository repository) {
+    @Autowired
+    public SleepLogService(SleepLogRepository repository, SleepLogMapper mapper) {
         this.repository = repository;
+        this.mapper = mapper;
     }
 
     /**
@@ -33,8 +37,8 @@ public class SleepLogService {
      */
     public SleepLog save(SleepLogDto dto) {
         SleepLog log = mapper.toEntity(dto);
-        log.setId(UUID.randomUUID()); // Manually setting ID
-        log.setMorningFeeling(SleepLog.MorningFeeling.valueOf(dto.morningFeeling.toUpperCase()));
+        log.setId(UUID.randomUUID());
+        log.setMorningFeeling(SleepLog.MorningFeeling.valueOf(dto.getMorningFeeling().toUpperCase()));
         return repository.save(log);
     }
 
@@ -45,11 +49,11 @@ public class SleepLogService {
      * @return Map of aggregated statistics.
      */
     public Map<String, Object> get30DayStats(UUID userId) {
-        List<SleepLog> logs = repository.findLast30DaysLogs(userId);
+        LocalDate cutoff = LocalDate.now().minusDays(30);
+        List<SleepLog> logs = repository.findLast30DaysLogs(userId, cutoff);
         if (logs.isEmpty()) {
             return Collections.emptyMap();
         }
-
         return buildSleepStats(logs);
     }
 

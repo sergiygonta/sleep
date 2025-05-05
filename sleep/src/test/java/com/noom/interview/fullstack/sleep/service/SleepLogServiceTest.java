@@ -3,12 +3,14 @@ package com.noom.interview.fullstack.sleep.service;
 import com.noom.interview.fullstack.sleep.dto.SleepLogDto;
 import com.noom.interview.fullstack.sleep.entity.SleepLog;
 import com.noom.interview.fullstack.sleep.entity.SleepLog.MorningFeeling;
+import com.noom.interview.fullstack.sleep.mapper.SleepLogMapper;
 import com.noom.interview.fullstack.sleep.repository.SleepLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.*;
 class SleepLogServiceTest {
 
     private SleepLogRepository repository;
+    private SleepLogMapper mapper;
     private SleepLogService service;
 
     /**
@@ -29,7 +32,8 @@ class SleepLogServiceTest {
     @BeforeEach
     void setUp() {
         repository = mock(SleepLogRepository.class);
-        service = new SleepLogService(repository);
+        mapper = mock(SleepLogMapper.class);
+        service = new SleepLogService(repository, mapper);
     }
 
     /**
@@ -47,22 +51,30 @@ class SleepLogServiceTest {
                 "GOOD"
         );
 
-        SleepLog mockSaved = new SleepLog();
-        mockSaved.setId(UUID.randomUUID());
-        mockSaved.setUserId(userId);
-        mockSaved.setSleepDate(dto.getSleepDate());
-        mockSaved.setTimeInBedStart(dto.getTimeInBedStart());
-        mockSaved.setTimeInBedEnd(dto.getTimeInBedEnd());
-        mockSaved.setTotalTimeInBedMinutes(dto.getTotalTimeInBedMinutes());
-        mockSaved.setMorningFeeling(MorningFeeling.GOOD);
+        SleepLog mapped = new SleepLog();
+        mapped.setUserId(userId);
+        mapped.setSleepDate(dto.getSleepDate());
+        mapped.setTimeInBedStart(dto.getTimeInBedStart());
+        mapped.setTimeInBedEnd(dto.getTimeInBedEnd());
+        mapped.setTotalTimeInBedMinutes(dto.getTotalTimeInBedMinutes());
 
-        when(repository.save(any(SleepLog.class))).thenReturn(mockSaved);
+        SleepLog saved = new SleepLog();
+        saved.setId(UUID.randomUUID());
+        saved.setUserId(userId);
+        saved.setSleepDate(dto.getSleepDate());
+        saved.setTimeInBedStart(dto.getTimeInBedStart());
+        saved.setTimeInBedEnd(dto.getTimeInBedEnd());
+        saved.setTotalTimeInBedMinutes(dto.getTotalTimeInBedMinutes());
+        saved.setMorningFeeling(MorningFeeling.GOOD);
 
-        SleepLog saved = service.save(dto);
+        when(mapper.toEntity(dto)).thenReturn(mapped);
+        when(repository.save(any(SleepLog.class))).thenReturn(saved);
 
-        assertNotNull(saved);
-        assertEquals(userId, saved.getUserId());
-        verify(repository, times(1)).save(any(SleepLog.class));
+        SleepLog result = service.save(dto);
+
+        assertNotNull(result);
+        assertEquals(userId, result.getUserId());
+        verify(repository).save(any(SleepLog.class));
     }
 
     /**
@@ -71,12 +83,16 @@ class SleepLogServiceTest {
     @Test
     void getLastLog_returnsMostRecentLog() {
         UUID userId = UUID.randomUUID();
-        SleepLog expected = new SleepLog();
-        expected.setUserId(userId);
-        expected.setSleepDate(LocalDate.now());
-        expected.setMorningFeeling(MorningFeeling.GOOD);
+        SleepLog log = new SleepLog();
+        log.setUserId(userId);
+        log.setSleepDate(LocalDate.now());
+        log.setMorningFeeling(MorningFeeling.GOOD);
 
-        when(repository.findTopByUserIdOrderBySleepDateDesc(userId)).thenReturn(Optional.of(expected));
+        SleepLogDto dto = new SleepLogDto();
+        dto.setUserId(userId);
+
+        when(repository.findTopByUserIdOrderBySleepDateDesc(userId)).thenReturn(Optional.of(log));
+        when(mapper.toDto(log)).thenReturn(dto);
 
         Optional<SleepLogDto> result = service.getLastLog(userId);
         assertTrue(result.isPresent());
@@ -102,7 +118,7 @@ class SleepLogServiceTest {
             logs.add(log);
         }
 
-        when(repository.findLast30DaysLogs(userId)).thenReturn(logs);
+        when(repository.findLast30DaysLogs(eq(userId), any())).thenReturn(logs);
 
         Map<String, Object> stats = service.get30DayStats(userId);
         assertEquals(510.0, stats.get("avg_time_in_bed_minutes"));
