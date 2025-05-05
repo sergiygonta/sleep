@@ -4,8 +4,8 @@ plugins {
 	id 'java'
 }
 
-//group = 'com.noom.interview.fullstack'
-//version = '0.0.1-SNAPSHOT'
+group = 'com.noom.interview.fullstack'
+version = '0.0.1-SNAPSHOT'
 
 java {
 	sourceCompatibility = '11'
