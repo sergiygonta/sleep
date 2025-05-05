@@ -11,6 +11,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Service layer handling business logic related to sleep logs.
+ */
 @Service
 public class SleepLogService {
 
@@ -20,6 +23,12 @@ public class SleepLogService {
         this.repository = repository;
     }
 
+    /**
+     * Saves a new sleep log based on the given DTO.
+     *
+     * @param dto Data transfer object containing sleep log details.
+     * @return Saved SleepLog entity.
+     */
     public SleepLog save(SleepLogDto dto) {
         SleepLog log = new SleepLog();
         log.setId(UUID.randomUUID());
@@ -32,6 +41,12 @@ public class SleepLogService {
         return repository.save(log);
     }
 
+    /**
+     * Computes 30-day sleep statistics for a user.
+     *
+     * @param userId UUID of the user.
+     * @return Map of aggregated statistics.
+     */
     public Map<String, Object> get30DayStats(UUID userId) {
         List<SleepLog> logs = repository.findLast30DaysLogs(userId);
         if (logs.isEmpty()) return Map.of();
@@ -52,17 +67,35 @@ public class SleepLogService {
         );
     }
 
+    /**
+     * Averages a stream of LocalDateTime values as LocalTime.
+     *
+     * @param times Stream of LocalDateTime.
+     * @return Averaged LocalTime.
+     */
     private LocalTime averageTime(Stream<LocalDateTime> times) {
         List<LocalTime> list = times.map(LocalDateTime::toLocalTime).collect(Collectors.toList());
         int totalSeconds = list.stream().mapToInt(LocalTime::toSecondOfDay).sum();
         return LocalTime.ofSecondOfDay(totalSeconds / list.size());
     }
 
+    /**
+     * Retrieves the most recent sleep log for a user.
+     *
+     * @param userId UUID of the user.
+     * @return Optional of SleepLogDto.
+     */
     public Optional<SleepLogDto> getLastLog(UUID userId) {
         return repository.findTopByUserIdOrderBySleepDateDesc(userId)
                 .map(this::toDto);
     }
 
+    /**
+     * Converts a SleepLog entity to its DTO representation.
+     *
+     * @param log SleepLog entity.
+     * @return SleepLogDto.
+     */
     private SleepLogDto toDto(SleepLog log) {
         return new SleepLogDto(
                 log.getUserId(),
@@ -73,5 +106,4 @@ public class SleepLogService {
                 log.getMorningFeeling().name()
         );
     }
-
 }

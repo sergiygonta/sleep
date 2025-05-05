@@ -7,23 +7,34 @@ import com.noom.interview.fullstack.sleep.repository.SleepLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link SleepLogService}.
+ */
 class SleepLogServiceTest {
 
     private SleepLogRepository repository;
     private SleepLogService service;
 
+    /**
+     * Initializes mocks before each test.
+     */
     @BeforeEach
     void setUp() {
         repository = mock(SleepLogRepository.class);
         service = new SleepLogService(repository);
     }
 
+    /**
+     * Tests saving a sleep log.
+     */
     @Test
     void save_shouldPersistSleepLog() {
         UUID userId = UUID.randomUUID();
@@ -43,7 +54,7 @@ class SleepLogServiceTest {
         mockSaved.setTimeInBedStart(dto.getTimeInBedStart());
         mockSaved.setTimeInBedEnd(dto.getTimeInBedEnd());
         mockSaved.setTotalTimeInBedMinutes(dto.getTotalTimeInBedMinutes());
-        mockSaved.setMorningFeeling(SleepLog.MorningFeeling.valueOf(dto.getMorningFeeling()));
+        mockSaved.setMorningFeeling(MorningFeeling.GOOD);
 
         when(repository.save(any(SleepLog.class))).thenReturn(mockSaved);
 
@@ -54,7 +65,9 @@ class SleepLogServiceTest {
         verify(repository, times(1)).save(any(SleepLog.class));
     }
 
-
+    /**
+     * Tests fetching the most recent sleep log.
+     */
     @Test
     void getLastLog_returnsMostRecentLog() {
         UUID userId = UUID.randomUUID();
@@ -63,14 +76,16 @@ class SleepLogServiceTest {
         expected.setSleepDate(LocalDate.now());
         expected.setMorningFeeling(MorningFeeling.GOOD);
 
-        when(repository.findTopByUserIdOrderBySleepDateDesc(userId))
-                .thenReturn(Optional.of(expected));
+        when(repository.findTopByUserIdOrderBySleepDateDesc(userId)).thenReturn(Optional.of(expected));
 
         Optional<SleepLogDto> result = service.getLastLog(userId);
         assertTrue(result.isPresent());
         assertEquals(userId, result.get().getUserId());
     }
 
+    /**
+     * Tests the calculation of 30-day average sleep statistics.
+     */
     @Test
     void get30DayStats_returnsCorrectStats() {
         UUID userId = UUID.randomUUID();

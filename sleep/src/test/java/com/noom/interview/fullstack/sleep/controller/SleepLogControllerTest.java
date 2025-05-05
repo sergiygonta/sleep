@@ -11,10 +11,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +24,9 @@ import java.util.UUID;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Integration tests for {@link SleepLogController}.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -52,11 +55,17 @@ class SleepLogControllerTest {
 
     private UUID userId;
 
+    /**
+     * Initializes test data before each test method.
+     */
     @BeforeEach
     void setup() {
         userId = UUID.randomUUID();
     }
 
+    /**
+     * Tests the sleep log creation endpoint.
+     */
     @Test
     void testLogSleep() throws Exception {
         SleepLogDto dto = new SleepLogDto(
@@ -75,6 +84,9 @@ class SleepLogControllerTest {
                 .andExpect(jsonPath("$.userId").value(userId.toString()));
     }
 
+    /**
+     * Tests fetching the most recent sleep log.
+     */
     @Test
     void testGetLastSleepLog() throws Exception {
         testLogSleep();
@@ -84,9 +96,12 @@ class SleepLogControllerTest {
                 .andExpect(jsonPath("$.userId").value(userId.toString()));
     }
 
+    /**
+     * Tests the 30-day sleep stats endpoint.
+     */
     @Test
     void testGet30DayStats() throws Exception {
-        testLogSleep(); // insert one log first
+        testLogSleep();
 
         mockMvc.perform(get("/api/sleep/{userId}/30-day-avg", userId.toString()))
                 .andExpect(status().isOk())

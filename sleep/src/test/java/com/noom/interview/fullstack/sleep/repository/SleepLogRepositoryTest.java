@@ -6,20 +6,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Integration tests for {@link SleepLogRepository}.
+ */
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -42,6 +46,9 @@ class SleepLogRepositoryTest {
     @Autowired
     private SleepLogRepository repository;
 
+    /**
+     * Tests fetching the latest sleep log for a user.
+     */
     @Test
     void testFindTopByUserIdOrderBySleepDateDesc() {
         UUID userId = UUID.randomUUID();
@@ -62,6 +69,9 @@ class SleepLogRepositoryTest {
         assertEquals(userId, result.get().getUserId());
     }
 
+    /**
+     * Tests fetching sleep logs from the past 30 days.
+     */
     @Test
     void testFindLast30DaysLogs() {
         UUID userId = UUID.randomUUID();
